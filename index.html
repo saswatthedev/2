@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>✦✦</title>
 
     <!-- Google Fonts -->
@@ -41,6 +42,8 @@
             -webkit-user-drag: none;
             touch-action: none;
             overscroll-behavior: none;
+
+            touch-action: manipulation
         }
 
         #canvas-container {
@@ -160,6 +163,7 @@
             overflow-y: auto;
             touch-action: auto;
             overscroll-behavior: contain;
+            height: 50vh
     /* -------------------------- */
         }
 
@@ -222,8 +226,10 @@
             }
             #message-card {
                 padding: 1.5rem;
+                padding: 1.5rem;
                 max-width: 92%;
-                max-height: 90vh;
+                height: 60vh;
+
             }
             #message-card h1 {
                 font-size: 1.5rem;
