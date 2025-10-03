@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Two Months, One Universe</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=EB+Garamond:ital,wght@0,400;1,400&family=Montserrat:wght@200;300&display=swap" rel="stylesheet">
+
+    <style>
+:root {
+    --glow-color: rgba(170, 220, 255, 1);
+    --glow-shadow: rgba(170, 220, 255, 0.8);
+}
+
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            cursor: crosshair;
+            position: relative;
+            justify-content: center;
+            align-items: center;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-user-drag: none;
+            touch-action: none;
+            overscroll-behavior: none;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            transition: opacity 1.5s ease-in-out;
+            touch-action: none;
+        }
+
+        #vignette-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            box-shadow: inset 0 0 15vw 5vw rgba(0, 0, 5, 0.7);
+            z-index: 5;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-size: 1.5rem;
+            color: #fff;
+            letter-spacing: 3px;
+            font-weight: 200;
+            transition: opacity 2s ease-in-out;
+        }
+
+        .loading-star {
+            display: inline-block;
+            animation: pulse 2s ease-in-out infinite;
+            text-shadow: 0 0 20px var(--glow-shadow);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        #prompt-text {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            font-weight: 200;
+            letter-spacing: 2px;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            text-shadow: 0 0 25px var(--glow-shadow);
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+.memory-label {
+    position: absolute;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.85rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+    text-shadow: 0 0 10px var(--glow-shadow), 0 0 20px rgba(0, 0, 0, 0.8);
+    white-space: normal;       /* allow line breaks */
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(170, 220, 255, 0.2);
+    backdrop-filter: blur(5px);
+    max-width: 85vw;
+    overflow: visible;         /* show all text */
+    text-overflow: unset;      /* remove ellipsis */
+    word-wrap: break-word;     /* break long words if needed */
+    line-height: 1.3;          /* optional: better spacing for multi-line text */
+}
+
+
+        #message-card {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1.05);
+            background: rgba(20, 20, 25, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0;
+            padding: 2.5rem;
+            width: 90%;
+            max-width: 550px;
+            text-align: center;
+            color: #ddd;
+            opacity: 0;
+            pointer-events: none;
+            box-shadow: none;
+            z-index: 10;
+            font-family: 'EB Garamond', serif;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        #message-card h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            letter-spacing: 3px;
+            color: #EAEAEA;
+            text-shadow: none;
+            text-transform: uppercase;
+        }
+
+        #message-card p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.3px;
+            white-space: pre-line;
+        }
+
+        #message-card .closing {
+            font-style: italic;
+            font-weight: 400;
+            color: rgba(220, 220, 220, 0.8);
+            font-size: 1.1rem;
+        }
+
+        #finish-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #ddd;
+            padding: 10px 20px;
+            margin-top: 1.5rem;
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: background 0.3s, color 0.3s;
+            font-size: 0.9rem;
+        }
+
+        #finish-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        @media (max-width: 768px) {
+            #prompt-text {
+                font-size: 0.95rem;
+                padding: 6px 12px;
+                letter-spacing: 1px;
+            }
+            .memory-label {
+                font-size: 0.75rem;
+                padding: 3px 6px;
+                max-width: 80vw;
+            }
+            #message-card {
+                padding: 1.5rem;
+                max-width: 92%;
+                max-height: 90vh;
+            }
+            #message-card h1 {
+                font-size: 1.5rem;
+                letter-spacing: 2px;
+                margin-bottom: 1rem;
+            }
+            #message-card p {
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+            #finish-btn {
+                font-size: 0.85rem;
+                padding: 8px 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #prompt-text {
+                font-size: 0.85rem;
+            }
+            .memory-label {
+                font-size: 0.7rem;
+                max-width: 75vw;
+            }
+            #message-card h1 {
+                font-size: 1.3rem;
+            }
+            #message-card p {
+                font-size: 0.95rem;
+            }
+        }
+
+        /* Custom Scrollbar Styling */
+        /* For Firefox */
+        #message-card {
+            scrollbar-width: thin;
+            scrollbar-color: #556688 #202324;
+        }
+
+        /* For Webkit Browsers (Chrome, Safari, Edge) */
+        #message-card::-webkit-scrollbar {
+            width: 8px;
+        }
+        #message-card::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        #message-card::-webkit-scrollbar-thumb {
+            background-color: #556688;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        #message-card::-webkit-scrollbar-thumb:hover {
+            background-color: #7799cc;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="vignette-overlay"></div>
+
+    <div id="loading-screen">
+        <span class="loading-star">✦</span>
+    </div>
+
+    <div id="prompt-text"></div>
+
+    <div id="message-card">
+        <h1></h1>
+        <p></p>
+        <p class="closing"></p>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="https://assets.codepen.io/225363/ethereal-ambient-11350.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+        // ============================================
+        // CUSTOMIZABLE CONTENT
+        // ============================================
+        const MEMORIES = [
+            "the day we randomly met, 2025/04/09", "though you were normal online friend, but i was wrong",
+            "started chatting often, later started calling often", "realizing a single day don't go by talking",
+            "laughing and feeling god sent you in life", "the small things we remember about eachother",
+            "made promises and started to go deeper and made nicknames", "never been partners but talked more than couples",
+            "the feeling of missing even after hours of talking", "sometimes sadness, madness and argument but mostly happines",
+            "unknowingly became one of the most important persons in my life", "started making meeting plans irl",
+            "2 months has completed but feels like we met 2 years ago", "waiting for the day we finally meet in person",
+            "looking back, every moment feels like destiny leading us here"
+        ];
+        const FINAL_MESSAGE = {
+            title: "Two Months, One Universe",
+            body: `Every memory with you is like a star, and together they form a constellation of us.
+That's why I created this little 3D sky — so you can see how our moments glow, how they connect, and how special they are.
+I first imagined this in a dream, and now I've expressed it through code to make it something you can see and feel.
+
+Out of billions of people in this world, somehow we found each other on a random site, just two strangers talking among millions.
+That still feels like magic to me, like God himself wanted our paths to cross so we could create stars like these.
+
+Today is Saturday, October 4, 2025.
+We met exactly two months ago, yet it already feels like we've known each other for years.
+We've made promises, shared thoughts, laughed like best friends, and sometimes even talked like couples — even though we're 'just friends.'
+It's confusing, crazy, and beautiful all at once.
+Sometimes it feels like Gly has fallen for him, like a falling star, yet she keeps it a secret… and that mystery makes his heart ache, wishing he could know her truth.
+
+I hope we'll keep our bond forever and make it grow stronger every single day — like a sky that never runs out of stars, each one brighter than the last.`,
+            closing: "- designed by saswat"
+        };
+        const COUNTDOWN_SEQUENCE = [6, 5, 4, 3];
+        const FINAL_COUNTDOWN_NUMBER = 2;
+        // ============================================
+
+        let scene, camera, renderer, clock;
+        let particles, distantParticles, farDistantParticles, nebula;
+        let stars = [], starConnections = [];
+        let currentStarIndex = 0;
+        let raycaster, mouse;
+        let cameraState = 'intro';
+        let cameraPivot;
+
+        let finalImageMesh = null, glowMesh = null;
+        let allConnections = [];
+        let finalConnections = [];
+
+        const assets = { font: null, finalImageTexture: null };
+
+        let canPlaceStars = false;
+        let musicStarted = false;
+        let placementCooldown = false;
+        let isMobile = false;
+
+        function init() {
+            // Detect mobile device
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                       ('ontouchstart' in window) ||
+                       (navigator.maxTouchPoints > 0);
+
+            clock = new THREE.Clock();
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x152255, 0.0003);
+
+            // Adjust camera for mobile
+            const fov = isMobile ? 60 : 75;
+            camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 3000);
+            camera.position.z = isMobile ? 100 : 80;
+
+            cameraPivot = new THREE.Group();
+            scene.add(cameraPivot);
+
+            renderer = new THREE.WebGLRenderer({
+                antialias: !isMobile, // Disable antialiasing on mobile for performance
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.5;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0x6080ff, 5.0);
+            scene.add(ambientLight);
+            const hemiLight = new THREE.HemisphereLight(0xa0c0ff, 0x101040, 2.5);
+            scene.add(hemiLight);
+
+            createStarfield();
+            createNebula();
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+
+            // Improved touch/click handling
+            if (isMobile) {
+                document.addEventListener('touchstart', onTouchStart, { passive: false });
+                document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+            } else {
+                document.addEventListener('click', onMouseClick, false);
+                document.addEventListener('mousemove', onMouseMove, false);
+            }
+
+            loadAssets();
+        }
+
+        function loadAssets() {
+            const textureLoader = new THREE.TextureLoader();
+            const fontLoader = new THREE.FontLoader();
+            assets.finalImageTexture = textureLoader.load('https://i.postimg.cc/tJ8tk9Xg/31fc2b22-b73d-4662-b024-83da368c1606.png');
+            fontLoader.load('https://unpkg.com/three@0.128.0/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+                assets.font = font;
+                allAssetsLoaded();
+            }, undefined, (error) => {
+                console.error("Font could not be loaded. Countdown will be skipped.", error);
+                allAssetsLoaded();
+            });
+        }
+
+        function allAssetsLoaded() {
+            const loadingScreen = document.getElementById('loading-screen');
+            loadingScreen.style.opacity = '0';
+            loadingScreen.addEventListener('transitionend', () => {
+                loadingScreen.style.display = 'none';
+                startCinematicSequence();
+            });
+        }
+
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            context.beginPath();
+            context.arc(32, 32, 30, 0, 2 * Math.PI);
+            context.fillStyle = 'white';
+            context.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createStarfield() {
+            const circleTexture = createCircleTexture();
+            const createLayer = (count, distance, size, opacity) => {
+                const geometry = new THREE.BufferGeometry();
+                const positions = [];
+                for (let i = 0; i < count; i++) {
+                    positions.push((Math.random() - 0.5) * distance, (Math.random() - 0.5) * distance, (Math.random() - 0.5) * distance);
+                }
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                const material = new THREE.PointsMaterial({
+                    size, color: 0xffffff, map: circleTexture, transparent: true, opacity: opacity,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false
+                });
+                return new THREE.Points(geometry, material);
+            };
+
+            // Reduce particle count on mobile for performance
+            const particleMultiplier = isMobile ? 0.5 : 1;
+            particles = createLayer(3000 * particleMultiplier, 400, 1.2, 1.0);
+            scene.add(particles);
+            distantParticles = createLayer(5000 * particleMultiplier, 1000, 0.9, 0.8);
+            scene.add(distantParticles);
+            farDistantParticles = createLayer(7000 * particleMultiplier, 2000, 0.6, 0.6);
+            scene.add(farDistantParticles);
+        }
+
+        function createNebula() {
+            const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+            const fragmentShader = `uniform float uTime; uniform vec3 uColor1; uniform vec3 uColor2; varying vec2 vUv;
+                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); } vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+                float snoise(vec3 v) { const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0); vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx); vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy); vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy; i = mod289(i); vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0)); float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx; vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_); vec4 x = x_ * ns.x + ns.yyyy; vec4 y = y_ * ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw); vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0)); vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww; vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w); vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3))); p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w; vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0); m = m * m; return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3))); }
+                void main() { float noise = snoise(vec3(vUv * 3.0, uTime * 0.1)); noise = pow(noise, 2.0); vec3 color = mix(uColor1, uColor2, vUv.y + noise * 0.2); float edgeFade = smoothstep(0.0, 0.5, length(vUv - 0.5)); gl_FragColor = vec4(color * noise, 1.0 - edgeFade); }`;
+            const uniforms = { uTime: { value: 0.0 }, uColor1: { value: new THREE.Color(0x253080) }, uColor2: { value: new THREE.Color(0x5075dd) } };
+            const geometry = new THREE.SphereGeometry(2500, isMobile ? 32 : 64, isMobile ? 32 : 64);
+            const material = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, side: THREE.BackSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            nebula = new THREE.Mesh(geometry, material);
+            scene.add(nebula);
+        }
+
+        function create3DNumber(text) {
+            if (!assets.font) return null;
+            const geometry = new THREE.TextGeometry(text, {
+                font: assets.font,
+                size: 10,
+                height: 2,
+                curveSegments: isMobile ? 8 : 12,
+                bevelEnabled: true,
+                bevelThickness: 0.5,
+                bevelSize: 0.3,
+                bevelSegments: isMobile ? 3 : 5
+            });
+            geometry.center();
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xadc8ff,
+                emissive: 0x2a528f,
+                emissiveIntensity: 0.2,
+                metalness: 0.1,
+                roughness: 0.5,
+                transparent: true,
+                opacity: 0
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.z = 20;
+            const light = new THREE.PointLight(0xadc8ff, 2, 50);
+            light.position.z = 5;
+            mesh.add(light);
+            return mesh;
+        }
+
+        function createStar(position) {
+            const geometry = new THREE.SphereGeometry(0.5, isMobile ? 16 : 32, isMobile ? 16 : 32);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0xa0d0ff,
+                emissiveIntensity: 4.0
+            });
+            const star = new THREE.Mesh(geometry, material);
+            star.position.copy(position);
+            const pointLight = new THREE.PointLight(0xd0e0ff, 3.0, 60);
+            star.add(pointLight);
+            scene.add(star);
+            return star;
+        }
+
+        function createConnection(start, end) {
+            const points = [start, end];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x90b0ff,
+                transparent: true,
+                opacity: 0,
+                linewidth: 3,
+                blending: THREE.AdditiveBlending
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            return line;
+        }
+
+        function startCinematicSequence() {
+            cameraState = 'intro';
+            if (!assets.font) {
+                showPrompt();
+                return;
+            }
+            const timeline = gsap.timeline();
+            const durationPerNumber = 1.5;
+            COUNTDOWN_SEQUENCE.forEach((num, index) => {
+                const startTime = index * durationPerNumber;
+                let numberMesh = null;
+                timeline.call(() => {
+                    numberMesh = create3DNumber(num.toString());
+                    if (numberMesh) scene.add(numberMesh);
+                    gsap.to(numberMesh.material, { opacity: 1, duration: 0.4, ease: "power2.in" });
+                    gsap.fromTo(numberMesh.scale, { x: 0.1, y: 0.1, z: 0.1 }, { x: 1, y: 1, z: 1, duration: 1.0, ease: "elastic.out(1, 0.5)" });
+                }, null, startTime);
+                timeline.call(() => {
+                    if (!numberMesh) return;
+                    gsap.to(numberMesh.material, { opacity: 0, duration: 0.4, ease: "power2.out" });
+                    gsap.to(numberMesh.scale, { x: 0.1, y: 0.1, z: 0.1, duration: 0.4, ease: "power2.in", onComplete: () => {
+                        if(numberMesh.parent) scene.remove(numberMesh)
+                    }});
+                }, null, startTime + durationPerNumber - 0.4);
+            });
+            const twoStartTime = COUNTDOWN_SEQUENCE.length * durationPerNumber;
+            let finalNumberMesh;
+            timeline.call(() => {
+                finalNumberMesh = create3DNumber(FINAL_COUNTDOWN_NUMBER.toString());
+                if (finalNumberMesh) {
+                    scene.add(finalNumberMesh);
+                    gsap.to(finalNumberMesh.material, { opacity: 1, duration: 1, ease: "power3.in" });
+                    gsap.fromTo(finalNumberMesh.scale, { x: 0.1, y: 0.1, z: 0.1 }, { x: 1.2, y: 1.2, z: 1.2, duration: 2, ease: "elastic.out(1, 0.4)" });
+                    setTimeout(() => {
+                        if (finalNumberMesh) {
+                            gsap.to(finalNumberMesh.material, { opacity: 0, duration: 1, ease: "power2.in", onComplete: () => {
+                                if (finalNumberMesh.parent) scene.remove(finalNumberMesh);
+                            }});
+                        }
+                    }, 2000);
+                }
+            }, null, twoStartTime);
+            timeline.to(camera.position, { z: 22, duration: 2.5, ease: "power2.in" }, twoStartTime + 1);
+            timeline.to(camera.position, { z: 15, duration: 1.5, ease: "power2.out"}, ">-0.2");
+            timeline.to(camera.position, { z: isMobile ? 80 : 60, duration: 2.5, ease: "power3.out" });
+            timeline.call(showPrompt);
+        }
+
+        function showPrompt() {
+            cameraState = 'interactive';
+            const promptElement = document.getElementById('prompt-text');
+            promptElement.textContent = isMobile ? "tap to make a star" : "click to make a star";
+            gsap.to(promptElement, { opacity: 1, duration: 1.5, ease: "power2.out" });
+            canPlaceStars = true;
+        }
+
+        function onMouseClick(event) {
+            handleInteraction(event.clientX, event.clientY);
+        }
+
+        function onTouchStart(event) {
+            event.preventDefault(); // Prevent default touch behavior
+            if (event.touches.length > 0) {
+                handleInteraction(event.touches[0].clientX, event.touches[0].clientY);
+            }
+        }
+
+        function handleInteraction(x, y) {
+            if (!musicStarted) {
+                const music = document.getElementById('bg-music');
+                music.volume = 0;
+                music.play().catch(e => console.log("Autoplay blocked."));
+                gsap.to(music, { volume: isMobile ? 0.2 : 0.3, duration: 4 });
+                musicStarted = true;
+            }
+            if (!canPlaceStars || currentStarIndex >= MEMORIES.length || placementCooldown) return;
+            placementCooldown = true;
+            setTimeout(() => { placementCooldown = false; }, isMobile ? 600 : 500);
+            mouse.x = (x / window.innerWidth) * 2 - 1;
+            mouse.y = -(y / window.innerHeight) * 2 + 1;
+            placeStar(mouse);
+        }
+
+        function placeStar(coordinates) {
+            if (currentStarIndex === 0) {
+                const promptElement = document.getElementById('prompt-text');
+                gsap.to(promptElement, { opacity: 0, duration: 1.5, ease: 'power2.out' });
+            }
+            raycaster.setFromCamera(coordinates, camera);
+            const distance = isMobile ? 50 : 40;
+            const position = new THREE.Vector3().copy(raycaster.ray.direction).multiplyScalar(distance).add(camera.position);
+            const star = createStar(position);
+            stars.push(star);
+            gsap.to(star.material, { opacity: 1, duration: 0.5 });
+            gsap.fromTo(star.material, { emissiveIntensity: 5 }, { emissiveIntensity: 1.5, duration: 1.5, ease: "power2.out" });
+            gsap.from(star.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 1.2, ease: "elastic.out(1, 0.4)" });
+
+            const label = document.createElement('div');
+            label.className = 'memory-label';
+            label.textContent = MEMORIES[currentStarIndex];
+            label.style.opacity = '0';
+            document.body.appendChild(label);
+            star.label = label;
+
+            star.updateLabel = function() {
+                if (!this.label) return;
+                const vector = this.position.clone().project(camera);
+
+                // Hide label if star is behind camera
+                if (vector.z > 1) {
+                    this.label.style.display = 'none';
+                    return;
+                }
+
+                this.label.style.display = 'block';
+
+                // Calculate screen position
+                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+
+                // Get label dimensions
+                const labelWidth = this.label.offsetWidth;
+                const labelHeight = this.label.offsetHeight;
+                const padding = 15; // Edge padding
+
+                // Calculate optimal position for label
+                let labelX = x;
+                let labelY = y;
+
+                // Horizontal positioning
+                if (x + labelWidth / 2 > window.innerWidth - padding) {
+                    // Too far right
+                    labelX = window.innerWidth - labelWidth - padding;
+                } else if (x - labelWidth / 2 < padding) {
+                    // Too far left
+                    labelX = padding;
+                } else {
+                    // Center horizontally on star
+                    labelX = x - labelWidth / 2;
+                }
+
+                // Vertical positioning - prefer below star
+                if (y + 20 + labelHeight < window.innerHeight - padding) {
+                    // Place below star
+                    labelY = y + 20;
+                } else if (y - 20 - labelHeight > padding) {
+                    // Place above star if no room below
+                    labelY = y - 20 - labelHeight;
+                } else {
+                    // Center vertically if needed
+                    labelY = Math.max(padding, Math.min(window.innerHeight - labelHeight - padding, y - labelHeight / 2));
+                }
+
+                // Apply position
+                this.label.style.left = `${labelX}px`;
+                this.label.style.top = `${labelY}px`;
+                this.label.style.transform = 'none'; // Remove transform since we're positioning directly
+            };
+
+            gsap.to(label, { opacity: 1, duration: 0.5, delay: 0.5, onStart: () => star.updateLabel() });
+
+            if (currentStarIndex > 0) {
+                const prevStar = stars[currentStarIndex - 1];
+                const connection = createConnection(prevStar.position, star.position);
+                starConnections.push(connection);
+                const tl = gsap.timeline();
+                tl.to(connection.material, { opacity: 0.8, duration: 0.5, ease: "power2.out" })
+                  .to(connection.material, { opacity: 0.5, duration: 0.7, ease: "power2.inOut" });
+            }
+
+            if (currentStarIndex >= 2) {
+                const oldStar = stars[currentStarIndex - 2];
+                if (oldStar && oldStar.label) {
+                    gsap.to(oldStar.label, { opacity: 0, duration: 1.5, ease: 'power2.in', onComplete: () => {
+                        if (oldStar.label.parentNode) {
+                            oldStar.label.parentNode.removeChild(oldStar.label);
+                        }
+                        oldStar.label = null;
+                    }});
+                }
+            }
+
+            currentStarIndex++;
+            if (currentStarIndex >= MEMORIES.length) {
+                canPlaceStars = false;
+                setTimeout(showFinalConstellation, 2500);
+            }
+        }
+
+        function showFinalConstellation() {
+            cameraState = 'final';
+            gsap.killTweensOf(camera.position);
+            const constellationCenter = new THREE.Vector3();
+            stars.forEach(star => constellationCenter.add(star.position));
+            constellationCenter.divideScalar(stars.length || 1);
+            let maxDist = 0;
+            stars.forEach(star => { const dist = star.position.distanceTo(constellationCenter); if (dist > maxDist) maxDist = dist; });
+            const cameraDistance = Math.max(isMobile ? 100 : 80, maxDist / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.5);
+            const finalCameraPos = new THREE.Vector3(constellationCenter.x, constellationCenter.y + cameraDistance * 0.2, constellationCenter.z + cameraDistance);
+            const lookAtTarget = { ...camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)) };
+            gsap.to(lookAtTarget, { x: constellationCenter.x, y: constellationCenter.y, z: constellationCenter.z, duration: 5, ease: "power3.inOut" });
+            gsap.to(camera.position, { ...finalCameraPos, duration: 5, ease: "power3.inOut", onUpdate: () => { camera.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z); }, onComplete: () => { cameraPivot.position.copy(constellationCenter); scene.add(cameraPivot); cameraPivot.attach(camera); } });
+            gsap.to(document.getElementById('bg-music'), { volume: isMobile ? 0.4 : 0.6, duration: 4 });
+            stars.forEach(star => { if (star.label) { gsap.to(star.label, { opacity: 0, duration: 1.5, ease: "power2.inOut", onComplete: () => star.label.remove() }); } });
+            starConnections.forEach(conn => { gsap.to(conn.material, { opacity: 1.0, duration: 3, ease: 'power3.inOut' }); });
+            allConnections = [...starConnections];
+            const messageCard = document.getElementById('message-card');
+            messageCard.querySelector('h1').textContent = FINAL_MESSAGE.title;
+            messageCard.querySelector('p:first-of-type').textContent = FINAL_MESSAGE.body;
+            messageCard.querySelector('.closing').textContent = FINAL_MESSAGE.closing;
+            const finishBtn = document.createElement('button');
+            finishBtn.id = 'finish-btn';
+            finishBtn.textContent = 'Draw Her';
+            messageCard.appendChild(finishBtn);
+            finishBtn.addEventListener('click', handleFinishClick, { once: true });
+            gsap.to(messageCard, { opacity: 1, scale: 1, pointerEvents: 'auto', duration: 2.5, delay: 4, ease: "power3.out" });
+        }
+
+        function handleFinishClick() {
+            const messageCard = document.getElementById('message-card');
+            const finishBtn = document.getElementById('finish-btn');
+            finishBtn.disabled = true;
+            finishBtn.style.pointerEvents = 'none';
+            cameraState = 'finished';
+            const constellationCenter = cameraPivot.position.clone();
+
+            if (stars.length === 0) return;
+
+            let minX = stars[0].position.x, maxX = stars[0].position.x;
+            let minY = stars[0].position.y, maxY = stars[0].position.y;
+            stars.forEach(star => {
+                minX = Math.min(minX, star.position.x);
+                maxX = Math.max(maxX, star.position.x);
+                minY = Math.min(minY, star.position.y);
+                maxY = Math.max(maxY, star.position.y);
+            });
+
+            const constellationWidth = maxX - minX;
+            const constellationHeight = maxY - minY;
+            const constellationAspect = constellationWidth / constellationHeight;
+
+            const texture = assets.finalImageTexture;
+            const imageAspect = texture.image ? (texture.image.naturalWidth / texture.image.naturalHeight) : 1;
+
+            let imageWidth, imageHeight;
+            const padding = 1.5;
+
+            if (imageAspect > constellationAspect) {
+                imageWidth = constellationWidth * padding;
+                imageHeight = imageWidth / imageAspect;
+            } else {
+                imageHeight = constellationHeight * padding;
+                imageWidth = imageHeight * imageAspect;
+            }
+
+            const imageGeometry = new THREE.PlaneGeometry(imageWidth, imageHeight);
+            const imageMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            finalImageMesh = new THREE.Mesh(imageGeometry, imageMaterial);
+            finalImageMesh.position.copy(constellationCenter);
+            finalImageMesh.renderOrder = 999;
+            scene.add(finalImageMesh);
+
+            const glowGeometry = new THREE.PlaneGeometry(imageWidth * 1.2, imageHeight * 1.2);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                map: assets.finalImageTexture.clone(),
+                color: 0x80c5ff,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+            glowMesh.position.copy(constellationCenter);
+            glowMesh.position.z -= 0.1;
+            scene.add(glowMesh);
+
+            const tl = gsap.timeline();
+            tl.to(messageCard, { opacity: 0, scale: 0.9, duration: 0.5, pointerEvents: 'none', ease: 'power2.in' });
+            tl.to(document.getElementById('bg-music'), { volume: 0, duration: 8.0 }, 0);
+            tl.call(() => {
+                for (let i = 0; i < stars.length; i++) {
+                    for (let j = i + 1; j < stars.length; j++) {
+                        const connection = createConnection(stars[i].position, stars[j].position);
+                        connection.material.color.set(0x99ddff);
+                        finalConnections.push(connection);
+                        allConnections.push(connection);
+                    }
+                }
+                gsap.to(finalConnections.map(c => c.material), { opacity: 0.25, duration: 2.0, stagger: 0.005, ease: "power2.out" });
+            }, [], 1.5);
+            const fadeOutStartTime = 3.5;
+            tl.addLabel("startConstellationFade", fadeOutStartTime);
+            tl.to(stars.map(s => s.material), { opacity: 0, duration: 2.0, ease: 'power2.in' }, "startConstellationFade");
+            tl.call(() => { gsap.to(allConnections.map(c => c.material), { opacity: 0, duration: 1.8, ease: 'power2.in' }); }, [], "startConstellationFade+=0.3");
+            const linesFadedOutTime = fadeOutStartTime + 0.3 + 1.8;
+            tl.addLabel("linesFadedOut", linesFadedOutTime);
+            tl.to(camera.position, { z: camera.position.z + 20, duration: 3.5, ease: 'power2.inOut' }, "startConstellationFade");
+            tl.call(() => { stars.forEach(star => { if (star.parent) scene.remove(star); }); allConnections.forEach(conn => { if (conn.parent) scene.remove(conn); }); stars = []; allConnections = []; finalConnections = []; }, [], "linesFadedOut");
+            const imageFadeInTime = "linesFadedOut+=0.5";
+            tl.to(finalImageMesh.material, { opacity: 1, duration: 2.5, ease: 'power2.out' }, imageFadeInTime);
+            tl.from(finalImageMesh.scale, { x: 0.7, y: 0.7, duration: 3.5, ease: 'power2.out' }, "<");
+            tl.from(glowMesh.scale, { x: 1.5, y: 1.5, duration: 2.0, ease: 'power2.out' }, imageFadeInTime);
+            tl.to(glowMesh.material, { opacity: 1.2, duration: 2.0, ease: 'power2.out', onComplete: () => { gsap.to(glowMesh.material, { opacity: 0, duration: 3.0, ease: 'power3.out' }); } }, imageFadeInTime);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseMove(event) {
+            if (!isMobile) {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
+            // Reduce rotation speed on mobile for performance
+            const rotationMultiplier = isMobile ? 0.5 : 1;
+            particles.rotation.y += delta * 0.01 * rotationMultiplier;
+            distantParticles.rotation.y += delta * 0.005 * rotationMultiplier;
+            if (farDistantParticles) farDistantParticles.rotation.y += delta * 0.002 * rotationMultiplier;
+
+            if(nebula) nebula.material.uniforms.uTime.value = elapsedTime;
+
+            stars.forEach((star, index) => {
+                const timeOffset = index * 0.5;
+                const scale = 1 + Math.sin(elapsedTime * 2 + timeOffset) * 0.08;
+                star.scale.set(scale, scale, scale);
+                if (star.label && star.label.style.opacity > 0) {
+                    star.updateLabel();
+                }
+            });
+
+            switch (cameraState) {
+                case 'interactive':
+                    if (!isMobile) {
+                        const targetX = mouse.x * 5;
+                        const targetY = mouse.y * 5;
+                        camera.position.x += (targetX - camera.position.x) * 0.02;
+                        camera.position.y += (targetY - camera.position.y) * 0.02;
+                    }
+                    camera.lookAt(scene.position);
+                    break;
+                case 'final':
+                    if(cameraPivot.children.length > 0) {
+                        cameraPivot.rotation.y += delta * 0.05 * rotationMultiplier;
+                    }
+                    break;
+                case 'finished':
+                    break;
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('load', () => { init(); animate(); });
+        window.addEventListener('contextmenu', function (e) { e.preventDefault(); }, false);
+    </script>
+</body>
+</html>
