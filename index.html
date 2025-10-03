@@ -164,6 +164,7 @@
             touch-action: auto;
             overscroll-behavior: contain;
             height: 50vh
+            -webkit-overflow-scrolling: touch;
     /* -------------------------- */
         }
 
@@ -413,7 +414,13 @@ I hope we'll keep our bond forever and make it grow stronger every single day â€
             // Improved touch/click handling
             if (isMobile) {
                 document.addEventListener('touchstart', onTouchStart, { passive: false });
-                document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => {
+    // Allow scrolling if the target is inside the message card
+    if (e.target.closest('#message-card')) {
+        return; // Don't prevent default
+    }
+    e.preventDefault();
+}, { passive: false });
             } else {
                 document.addEventListener('click', onMouseClick, false);
                 document.addEventListener('mousemove', onMouseMove, false);
