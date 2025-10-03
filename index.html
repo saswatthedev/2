@@ -791,98 +791,131 @@ function onTouchStart(event) {
             gsap.to(messageCard, { opacity: 1, scale: 1, pointerEvents: 'auto', duration: 2.5, delay: 4, ease: "power3.out" });
         }
 
-        function handleFinishClick() {
-            const messageCard = document.getElementById('message-card');
-            const finishBtn = document.getElementById('finish-btn');
-            finishBtn.disabled = true;
-            finishBtn.style.pointerEvents = 'none';
-            cameraState = 'finished';
-            const constellationCenter = cameraPivot.position.clone();
+// This is the NEW "handleFinishClick". It now acts as a trigger to load the image.
+function handleFinishClick() {
+    const messageCard = document.getElementById('message-card');
+    const finishBtn = document.getElementById('finish-btn');
 
-            if (stars.length === 0) return;
+    // Disable the button and give user feedback that something is happening
+    finishBtn.disabled = true;
+    finishBtn.style.pointerEvents = 'none';
+    finishBtn.textContent = 'Drawing...';
 
-            let minX = stars[0].position.x, maxX = stars[0].position.x;
-            let minY = stars[0].position.y, maxY = stars[0].position.y;
-            stars.forEach(star => {
-                minX = Math.min(minX, star.position.x);
-                maxX = Math.max(maxX, star.position.x);
-                minY = Math.min(minY, star.position.y);
-                maxY = Math.max(maxY, star.position.y);
-            });
+    // Start loading the final image texture NOW.
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(
+        'https://i.postimg.cc/tJ8tk9Xg/31fc2b22-b73d-4662-b024-83da368c1606.png',
 
-            const constellationWidth = maxX - minX;
-            const constellationHeight = maxY - minY;
-            const constellationAspect = constellationWidth / constellationHeight;
+        // 1. SUCCESS CALLBACK: This function runs ONLY when the image is loaded.
+        (loadedTexture) => {
+            // Store the freshly loaded texture
+            assets.finalImageTexture = loadedTexture;
+            // Now, run the animation logic.
+            proceedWithImageAnimation();
+        },
 
-            const texture = assets.finalImageTexture;
-            const imageAspect = texture.image ? (texture.image.naturalWidth / texture.image.naturalHeight) : 1;
+        // 2. OPTIONAL: Progress callback (not needed for this)
+        undefined,
 
-            let imageWidth, imageHeight;
-            const padding = 1.5;
-
-            if (imageAspect > constellationAspect) {
-                imageWidth = constellationWidth * padding;
-                imageHeight = imageWidth / imageAspect;
-            } else {
-                imageHeight = constellationHeight * padding;
-                imageWidth = imageHeight * imageAspect;
-            }
-
-            const imageGeometry = new THREE.PlaneGeometry(imageWidth, imageHeight);
-            const imageMaterial = new THREE.MeshBasicMaterial({
-                map: texture,
-                transparent: true,
-                opacity: 0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-            finalImageMesh = new THREE.Mesh(imageGeometry, imageMaterial);
-            finalImageMesh.position.copy(constellationCenter);
-            finalImageMesh.renderOrder = 999;
-            scene.add(finalImageMesh);
-
-            const glowGeometry = new THREE.PlaneGeometry(imageWidth * 1.2, imageHeight * 1.2);
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                map: assets.finalImageTexture.clone(),
-                color: 0x80c5ff,
-                transparent: true,
-                opacity: 0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-            glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-            glowMesh.position.copy(constellationCenter);
-            glowMesh.position.z -= 0.1;
-            scene.add(glowMesh);
-
-            const tl = gsap.timeline();
-            tl.to(messageCard, { opacity: 0, scale: 0.9, duration: 0.5, pointerEvents: 'none', ease: 'power2.in' });
-            tl.to(document.getElementById('bg-music'), { volume: 0, duration: 8.0 }, 0);
-            tl.call(() => {
-                for (let i = 0; i < stars.length; i++) {
-                    for (let j = i + 1; j < stars.length; j++) {
-                        const connection = createConnection(stars[i].position, stars[j].position);
-                        connection.material.color.set(0x99ddff);
-                        finalConnections.push(connection);
-                        allConnections.push(connection);
-                    }
-                }
-                gsap.to(finalConnections.map(c => c.material), { opacity: 0.25, duration: 2.0, stagger: 0.005, ease: "power2.out" });
-            }, [], 1.5);
-            const fadeOutStartTime = 3.5;
-            tl.addLabel("startConstellationFade", fadeOutStartTime);
-            tl.to(stars.map(s => s.material), { opacity: 0, duration: 2.0, ease: 'power2.in' }, "startConstellationFade");
-            tl.call(() => { gsap.to(allConnections.map(c => c.material), { opacity: 0, duration: 1.8, ease: 'power2.in' }); }, [], "startConstellationFade+=0.3");
-            const linesFadedOutTime = fadeOutStartTime + 0.3 + 1.8;
-            tl.addLabel("linesFadedOut", linesFadedOutTime);
-            tl.to(camera.position, { z: camera.position.z + 20, duration: 3.5, ease: 'power2.inOut' }, "startConstellationFade");
-            tl.call(() => { stars.forEach(star => { if (star.parent) scene.remove(star); }); allConnections.forEach(conn => { if (conn.parent) scene.remove(conn); }); stars = []; allConnections = []; finalConnections = []; }, [], "linesFadedOut");
-            const imageFadeInTime = "linesFadedOut+=0.5";
-            tl.to(finalImageMesh.material, { opacity: 1, duration: 2.5, ease: 'power2.out' }, imageFadeInTime);
-            tl.from(finalImageMesh.scale, { x: 0.7, y: 0.7, duration: 3.5, ease: 'power2.out' }, "<");
-            tl.from(glowMesh.scale, { x: 1.5, y: 1.5, duration: 2.0, ease: 'power2.out' }, imageFadeInTime);
-            tl.to(glowMesh.material, { opacity: 1.2, duration: 2.0, ease: 'power2.out', onComplete: () => { gsap.to(glowMesh.material, { opacity: 0, duration: 3.0, ease: 'power3.out' }); } }, imageFadeInTime);
+        // 3. ERROR CALLBACK: If the image fails to load.
+        (error) => {
+            console.error("Failed to load the final image:", error);
+            finishBtn.textContent = 'Error'; // Show an error on the button
         }
+    );
+}
+
+// All of your original animation logic is moved into this new function.
+// It will only be called once the image is successfully loaded.
+function proceedWithImageAnimation() {
+    const messageCard = document.getElementById('message-card');
+    cameraState = 'finished';
+    const constellationCenter = cameraPivot.position.clone();
+
+    if (stars.length === 0) return;
+
+    let minX = stars[0].position.x, maxX = stars[0].position.x;
+    let minY = stars[0].position.y, maxY = stars[0].position.y;
+    stars.forEach(star => {
+        minX = Math.min(minX, star.position.x);
+        maxX = Math.max(maxX, star.position.x);
+        minY = Math.min(minY, star.position.y);
+        maxY = Math.max(maxY, star.position.y);
+    });
+
+    const constellationWidth = maxX - minX;
+    const constellationHeight = maxY - minY;
+    const constellationAspect = constellationWidth / constellationHeight;
+
+    const texture = assets.finalImageTexture; // This will now be the freshly loaded texture
+    const imageAspect = texture.image ? (texture.image.naturalWidth / texture.image.naturalHeight) : 1;
+
+    let imageWidth, imageHeight;
+    const padding = 1.5;
+
+    if (imageAspect > constellationAspect) {
+        imageWidth = constellationWidth * padding;
+        imageHeight = imageWidth / imageAspect;
+    } else {
+        imageHeight = constellationHeight * padding;
+        imageWidth = imageHeight * imageAspect;
+    }
+
+    const imageGeometry = new THREE.PlaneGeometry(imageWidth, imageHeight);
+    const imageMaterial = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    finalImageMesh = new THREE.Mesh(imageGeometry, imageMaterial);
+    finalImageMesh.position.copy(constellationCenter);
+    finalImageMesh.renderOrder = 999;
+    scene.add(finalImageMesh);
+
+    const glowGeometry = new THREE.PlaneGeometry(imageWidth * 1.2, imageHeight * 1.2);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        map: assets.finalImageTexture.clone(),
+        color: 0x80c5ff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+    glowMesh.position.copy(constellationCenter);
+    glowMesh.position.z -= 0.1;
+    scene.add(glowMesh);
+
+    const tl = gsap.timeline();
+    tl.to(messageCard, { opacity: 0, scale: 0.9, duration: 0.5, pointerEvents: 'none', ease: 'power2.in' });
+    tl.to(document.getElementById('bg-music'), { volume: 0, duration: 8.0 }, 0);
+    tl.call(() => {
+        for (let i = 0; i < stars.length; i++) {
+            for (let j = i + 1; j < stars.length; j++) {
+                const connection = createConnection(stars[i].position, stars[j].position);
+                connection.material.color.set(0x99ddff);
+                finalConnections.push(connection);
+                allConnections.push(connection);
+            }
+        }
+        gsap.to(finalConnections.map(c => c.material), { opacity: 0.25, duration: 2.0, stagger: 0.005, ease: "power2.out" });
+    }, [], 1.5);
+    const fadeOutStartTime = 3.5;
+    tl.addLabel("startConstellationFade", fadeOutStartTime);
+    tl.to(stars.map(s => s.material), { opacity: 0, duration: 2.0, ease: 'power2.in' }, "startConstellationFade");
+    tl.call(() => { gsap.to(allConnections.map(c => c.material), { opacity: 0, duration: 1.8, ease: 'power2.in' }); }, [], "startConstellationFade+=0.3");
+    const linesFadedOutTime = fadeOutStartTime + 0.3 + 1.8;
+    tl.addLabel("linesFadedOut", linesFadedOutTime);
+    tl.to(camera.position, { z: camera.position.z + 20, duration: 3.5, ease: 'power2.inOut' }, "startConstellationFade");
+    tl.call(() => { stars.forEach(star => { if (star.parent) scene.remove(star); }); allConnections.forEach(conn => { if (conn.parent) scene.remove(conn); }); stars = []; allConnections = []; finalConnections = []; }, [], "linesFadedOut");
+    const imageFadeInTime = "linesFadedOut+=0.5";
+    tl.to(finalImageMesh.material, { opacity: 1, duration: 2.5, ease: 'power2.out' }, imageFadeInTime);
+    tl.from(finalImageMesh.scale, { x: 0.7, y: 0.7, duration: 3.5, ease: 'power2.out' }, "<");
+    tl.from(glowMesh.scale, { x: 1.5, y: 1.5, duration: 2.0, ease: 'power2.out' }, imageFadeInTime);
+    tl.to(glowMesh.material, { opacity: 1.2, duration: 2.0, ease: 'power2.out', onComplete: () => { gsap.to(glowMesh.material, { opacity: 0, duration: 3.0, ease: 'power3.out' }); } }, imageFadeInTime);
+}
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
