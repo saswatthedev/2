@@ -163,7 +163,7 @@
             overflow-y: auto;
             touch-action: auto;
             overscroll-behavior: contain;
-            height: 50vh
+            height: 50vh;
             -webkit-overflow-scrolling: touch;
     /* -------------------------- */
         }
@@ -226,7 +226,6 @@
                 max-width: 80vw;
             }
             #message-card {
-                padding: 1.5rem;
                 padding: 1.5rem;
                 max-width: 92%;
                 height: 60vh;
@@ -623,12 +622,23 @@ document.addEventListener('touchmove', (e) => {
             handleInteraction(event.clientX, event.clientY);
         }
 
-        function onTouchStart(event) {
-            event.preventDefault(); // Prevent default touch behavior
-            if (event.touches.length > 0) {
-                handleInteraction(event.touches[0].clientX, event.touches[0].clientY);
-            }
-        }
+// This is the corrected code
+function onTouchStart(event) {
+    // Check if the touch started inside the scrollable popup
+    if (event.target.closest('#message-card')) {
+        // If it is, do nothing and let the browser handle scrolling normally.
+        return;
+    }
+
+    // If the touch was OUTSIDE the popup, then prevent default actions 
+    // (like pinch-zoom or scrolling the whole page) and handle star creation.
+    event.preventDefault(); 
+    
+    if (event.touches.length > 0) {
+        handleInteraction(event.touches[0].clientX, event.touches[0].clientY);
+    }
+}
+
 
         function handleInteraction(x, y) {
             if (!musicStarted) {
