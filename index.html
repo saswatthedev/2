@@ -431,7 +431,6 @@ document.addEventListener('touchmove', (e) => {
         function loadAssets() {
             const textureLoader = new THREE.TextureLoader();
             const fontLoader = new THREE.FontLoader();
-            assets.finalImageTexture = textureLoader.load('https://i.postimg.cc/tJ8tk9Xg/31fc2b22-b73d-4662-b024-83da368c1606.png');
             fontLoader.load('https://unpkg.com/three@0.128.0/examples/fonts/helvetiker_bold.typeface.json', (font) => {
                 assets.font = font;
                 allAssetsLoaded();
@@ -791,49 +790,69 @@ function onTouchStart(event) {
             gsap.to(messageCard, { opacity: 1, scale: 1, pointerEvents: 'auto', duration: 2.5, delay: 4, ease: "power3.out" });
         }
 
-// This is the NEW "handleFinishClick". It now acts as a trigger to load the image.
+/**
+ * FINAL ROBUST SOLUTION
+ * STEP 1: This is the new click handler. It starts the visual transition FIRST.
+ */
 function handleFinishClick() {
     const messageCard = document.getElementById('message-card');
     const finishBtn = document.getElementById('finish-btn');
 
-    // Disable the button and give user feedback that something is happening
+    // 1. Immediately disable the button and update its text.
     finishBtn.disabled = true;
     finishBtn.style.pointerEvents = 'none';
     finishBtn.textContent = 'Drawing...';
 
-    // Start loading the final image texture NOW.
-    const textureLoader = new THREE.TextureLoader();
-    textureLoader.load(
-        'https://i.postimg.cc/tJ8tk9Xg/31fc2b22-b73d-4662-b024-83da368c1606.png',
+    // 2. Start fading out the message card. The `onComplete` callback is key.
+    //    This gives a smooth transition and buys us time to load the image.
+    gsap.to(messageCard, {
+        opacity: 0,
+        scale: 0.9,
+        duration: 1.0, // A little longer to feel smoother
+        pointerEvents: 'none',
+        ease: 'power2.in',
+        onComplete: () => {
+            // 3. Card is gone. NOW, create a NEW texture loader and load the image.
+            //    This ensures everything is fresh and not affected by the browser's state.
+            console.log("Card faded out. Starting image load...");
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load(
+                'https://i.postimg.cc/tJ8tk9Xg/31fc2b22-b73d-4662-b024-83da368c1606.png',
 
-        // 1. SUCCESS CALLBACK: This function runs ONLY when the image is loaded.
-        (loadedTexture) => {
-            // Store the freshly loaded texture
-            assets.finalImageTexture = loadedTexture;
-            // Now, run the animation logic.
-            proceedWithImageAnimation();
-        },
+                // SUCCESS: This function is the GUARANTEE. It only runs when the
+                // image is downloaded, decoded, and ready for the GPU.
+                (loadedTexture) => {
+                    console.log("Image successfully loaded and ready!");
+                    // Pass the freshly loaded texture directly to the animation function.
+                    proceedWithImageAnimation(loadedTexture);
+                },
 
-        // 2. OPTIONAL: Progress callback (not needed for this)
-        undefined,
+                // PROGRESS: Optional, but good for debugging.
+                undefined,
 
-        // 3. ERROR CALLBACK: If the image fails to load.
-        (error) => {
-            console.error("Failed to load the final image:", error);
-            finishBtn.textContent = 'Error'; // Show an error on the button
+                // ERROR: If the network fails or URL is wrong.
+                (error) => {
+                    console.error("CRITICAL: Failed to load the final image.", error);
+                    // You could show an error message to the user here.
+                }
+            );
         }
-    );
+    });
 }
 
-// All of your original animation logic is moved into this new function.
-// It will only be called once the image is successfully loaded.
-function proceedWithImageAnimation() {
-    const messageCard = document.getElementById('message-card');
+
+/**
+ * STEP 2: This is the helper function that contains all the animation logic.
+ * It only runs AFTER the image is confirmed to be loaded and ready.
+ * Notice it now accepts the `texture` as an argument.
+ */
+function proceedWithImageAnimation(texture) {
     cameraState = 'finished';
     const constellationCenter = cameraPivot.position.clone();
 
     if (stars.length === 0) return;
 
+    // --- The rest of your code is identical, it just uses the 'texture' passed into it ---
     let minX = stars[0].position.x, maxX = stars[0].position.x;
     let minY = stars[0].position.y, maxY = stars[0].position.y;
     stars.forEach(star => {
@@ -847,7 +866,6 @@ function proceedWithImageAnimation() {
     const constellationHeight = maxY - minY;
     const constellationAspect = constellationWidth / constellationHeight;
 
-    const texture = assets.finalImageTexture; // This will now be the freshly loaded texture
     const imageAspect = texture.image ? (texture.image.naturalWidth / texture.image.naturalHeight) : 1;
 
     let imageWidth, imageHeight;
@@ -863,7 +881,7 @@ function proceedWithImageAnimation() {
 
     const imageGeometry = new THREE.PlaneGeometry(imageWidth, imageHeight);
     const imageMaterial = new THREE.MeshBasicMaterial({
-        map: texture,
+        map: texture, // Use the texture passed into this function
         transparent: true,
         opacity: 0,
         blending: THREE.AdditiveBlending,
@@ -876,7 +894,7 @@ function proceedWithImageAnimation() {
 
     const glowGeometry = new THREE.PlaneGeometry(imageWidth * 1.2, imageHeight * 1.2);
     const glowMaterial = new THREE.MeshBasicMaterial({
-        map: assets.finalImageTexture.clone(),
+        map: texture.clone(),
         color: 0x80c5ff,
         transparent: true,
         opacity: 0,
@@ -889,7 +907,7 @@ function proceedWithImageAnimation() {
     scene.add(glowMesh);
 
     const tl = gsap.timeline();
-    tl.to(messageCard, { opacity: 0, scale: 0.9, duration: 0.5, pointerEvents: 'none', ease: 'power2.in' });
+    // Note: The card fade-out is already done, so we remove it from this timeline.
     tl.to(document.getElementById('bg-music'), { volume: 0, duration: 8.0 }, 0);
     tl.call(() => {
         for (let i = 0; i < stars.length; i++) {
@@ -901,8 +919,8 @@ function proceedWithImageAnimation() {
             }
         }
         gsap.to(finalConnections.map(c => c.material), { opacity: 0.25, duration: 2.0, stagger: 0.005, ease: "power2.out" });
-    }, [], 1.5);
-    const fadeOutStartTime = 3.5;
+    }, [], 0); // Start this immediately
+    const fadeOutStartTime = 2.0;
     tl.addLabel("startConstellationFade", fadeOutStartTime);
     tl.to(stars.map(s => s.material), { opacity: 0, duration: 2.0, ease: 'power2.in' }, "startConstellationFade");
     tl.call(() => { gsap.to(allConnections.map(c => c.material), { opacity: 0, duration: 1.8, ease: 'power2.in' }); }, [], "startConstellationFade+=0.3");
